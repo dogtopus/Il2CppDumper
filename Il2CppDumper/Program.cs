@@ -131,6 +131,7 @@ namespace Il2CppDumper
                                 var writer = new StreamWriter(new FileStream("dump.cs", FileMode.Create), new UTF8Encoding(false));
                                 Console.WriteLine("Dumping...");
                                 //Script
+                                var r2scriptwriter = new StreamWriter(new FileStream("script.r2", FileMode.Create), new UTF8Encoding(false));
                                 var scriptwriter = new StreamWriter(new FileStream("script.py", FileMode.Create), new UTF8Encoding(false));
                                 scriptwriter.WriteLine(Resource1.ida);
                                 //dump image;
@@ -394,7 +395,14 @@ namespace Il2CppDumper
                                                     writer.Write("); // 0x{0:X}\n", il2cpp.methodPointers[methodDef.methodIndex]);
                                                     //Script - method
                                                     var name = ToEscapedString(metadata.GetStringFromIndex(typeDef.nameIndex) + "$$" + metadata.GetStringFromIndex(methodDef.nameIndex));
+                                                    //var assembly = ToEscapedString(metadata.GetStringFromIndex(methodDef.nameIndex).Replace(".dll", ""));
+                                                    var ns = ToEscapedString(metadata.GetStringFromIndex(typeDef.namespaceIndex));
                                                     scriptwriter.WriteLine($"SetMethod(0x{il2cpp.methodPointers[methodDef.methodIndex]:X}, '{name}')");
+                                                    r2scriptwriter.Write("\"af method.");
+                                                    if (!String.IsNullOrEmpty(ns)) {
+                                                        r2scriptwriter.Write($"{ns}::");
+                                                    }
+                                                    r2scriptwriter.WriteLine($"{name} 0x{il2cpp.methodPointers[methodDef.methodIndex]:x}\"");
                                                     //
                                                 }
                                                 else
@@ -416,10 +424,14 @@ namespace Il2CppDumper
                                 scriptwriter.WriteLine("print('Setting String...')");
                                 if (il2cpp.version > 16)
                                 {
+                                    r2scriptwriter.WriteLine($"fs+strings");
                                     foreach (var i in metadata.stringLiteralsdic)
                                     {
                                         scriptwriter.WriteLine($"SetString(0x{il2cpp.metadataUsages[i.Key]:X}, r'{ToEscapedString(i.Value)}')");
+                                        r2scriptwriter.WriteLine($"\"f str.dyn.{il2cpp.metadataUsages[i.Key]:x} = 0x{il2cpp.metadataUsages[i.Key]:x}\"");
+                                        r2scriptwriter.WriteLine($"\"fC str.dyn.{il2cpp.metadataUsages[i.Key]:x} {ToEscapedString(i.Value)}\"");
                                     }
+                                    r2scriptwriter.WriteLine($"fs-");
                                 }
                                 scriptwriter.WriteLine("print('Set string done')");
                                 //Script - MakeFunction
@@ -438,6 +450,7 @@ namespace Il2CppDumper
                                 //writer close
                                 writer.Close();
                                 scriptwriter.Close();
+                                r2scriptwriter.Close();
                                 Console.WriteLine("Done !");
                                 //DummyDll
                                 if (config.DummyDll)
